@@ -1,0 +1,8 @@
+node_modules/
+.env
+uploads/sonar/*
+uploads/camera/*
+reports/*
+!uploads/sonar/.gitkeep
+!uploads/camera/.gitkeep
+!reports/.gitkeep
