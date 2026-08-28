@@ -300,7 +300,7 @@ export default function About() {
               variants={fadeUp}
               className="mt-3 leading-relaxed text-slate-400"
             >
-              MarineGuard was brought to life by a team passionate
+              MarineGuard was brought to existence by a team passionate
               about technology, artificial intelligence, marine
               environments, and building solutions that can make
               underwater exploration smarter.
