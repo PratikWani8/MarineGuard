@@ -87,28 +87,42 @@ const creators = [
     role: "Team Lead",
     description:
       "Led the team, shaped MarineGuard's vision, and coordinated AI, backend, frontend, and product development.",
-    photo: "/creators/creator1.png",
+    photo: "/members/member1.png",
   },
   {
     name: "Aryan Mohite",
     role: "Product & Research",
     description:
       "Focused on product thinking, user experience, research, and shaping MarineGuard around real-world marine intelligence needs.",
-    photo: "/creators/creator2.png",
+    photo: "/members/member2.png",
   },
   {
     name: "Omkar Gaikwad",
     role: "Frontend Developer",
     description:
       "Designed and developed the MarineGuard experience with a focus on accessibility, simplicity, and a modern underwater interface.",
-    photo: "/creators/creator3.png",
+    photo: "/members/member3.png",
   },
   {
     name: "Moiz Shaikh",
     role: "AI/ML Engineer",
     description:
       "Worked on intelligent sonar analysis, detection patterns, and responsible AI features for underwater intelligence.",
-    photo: "/creators/creator4.png",
+    photo: "/members/member4.png",
+  },
+   {
+    name: "Sharanya Mahalle",
+    role: "Environmental Impact Analyst",
+    description:
+      "Analyzed the environmental impact of underwater survey operations and supported conservation efforts.",
+    photo: "/members/member5.png",
+  },
+  {
+    name: "Sejal Dhamgaye",
+    role: "Documentation & Report",
+    description:
+      "Worked on documentation, report generation, and ensuring that MarineGuard's findings are clear and actionable.",
+    photo: "/members/member6.png",
   },
 ];
 
