@@ -12,20 +12,13 @@ export function useSocket(surveyId) {
     useState([]);
 
   useEffect(() => {
-    // -------------------------------------------------------
-    // No survey = no socket connection
-    // -------------------------------------------------------
-
+  
     if (!surveyId) {
       setConnected(false);
       return undefined;
     }
 
     let mounted = true;
-
-    // -------------------------------------------------------
-    // Determine socket origin safely
-    // -------------------------------------------------------
 
     let socketOrigin;
 
@@ -43,10 +36,6 @@ export function useSocket(surveyId) {
 
       return undefined;
     }
-
-    // -------------------------------------------------------
-    // Create Socket.IO connection
-    // -------------------------------------------------------
 
     const socket = io(
       socketOrigin,
@@ -70,10 +59,6 @@ export function useSocket(surveyId) {
 
     socketRef.current = socket;
 
-    // -------------------------------------------------------
-    // Event helper
-    // -------------------------------------------------------
-
     const pushEvent =
       (type) =>
       (payload) => {
@@ -94,10 +79,6 @@ export function useSocket(surveyId) {
         );
       };
 
-    // -------------------------------------------------------
-    // CONNECT
-    // -------------------------------------------------------
-
     const handleConnect = () => {
       if (!mounted) {
         return;
@@ -116,10 +97,6 @@ export function useSocket(surveyId) {
       );
     };
 
-    // -------------------------------------------------------
-    // DISCONNECT
-    // -------------------------------------------------------
-
     const handleDisconnect = (
       reason
     ) => {
@@ -134,10 +111,6 @@ export function useSocket(surveyId) {
 
       setConnected(false);
     };
-
-    // -------------------------------------------------------
-    // CONNECTION ERROR
-    // -------------------------------------------------------
 
     const handleConnectError = (
       error
@@ -154,10 +127,6 @@ export function useSocket(surveyId) {
 
       setConnected(false);
     };
-
-    // -------------------------------------------------------
-    // REGISTER CONNECTION EVENTS
-    // -------------------------------------------------------
 
     socket.on(
       "connect",
