@@ -11,7 +11,7 @@ router.get("/", async (req, res) => {
   res.json({
     success: true,
     data: {
-      service: "marineguard-backend",
+      service: "marineguard-server",
       status: "ok",
       aiService: ai
     }
