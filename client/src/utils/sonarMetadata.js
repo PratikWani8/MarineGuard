@@ -235,11 +235,6 @@ async function extractGeoTiff(file) {
       fileDirectory,
     };
   } catch (error) {
-    console.warn(
-      "GeoTIFF metadata extraction failed:",
-      error
-    );
-
     return {};
   }
 }
@@ -275,6 +270,7 @@ function normalizeOCRText(text) {
  * Do not globally replace numbers/letters because
  * sonar values may legitimately contain both.
  */
+
 function correctOCRText(text) {
   return String(text || "")
     .replace(/\blattitude\b/gi, "latitude")
@@ -352,6 +348,7 @@ function ocrLabelPattern(labels) {
  * Range 50
  * HDG 120
  */
+
 function extractLabeledNumber(
   text,
   labels,
@@ -443,6 +440,7 @@ function applyDirection(
 /**
  * Convert DMS to decimal.
  */
+
 function dmsToDecimal(
   degrees,
   minutes = 0,
@@ -488,6 +486,7 @@ function dmsToDecimal(
  * Latitude: 18°31'13"N
  * LAT 18 31 13 N
  */
+
 function extractCoordinate(
   text,
   labels,
@@ -610,6 +609,7 @@ function extractCoordinate(
  * 18.5203 N
  * 73.8567 E
  */
+
 function extractUnlabeledCoordinates(
   text
 ) {
@@ -721,6 +721,7 @@ function extractFrameId(text) {
    *
    * Only use it when it is clearly long enough.
    */
+
   const timestamp =
     source.match(
       /\b(20\d{6,14})\b/
@@ -1140,6 +1141,7 @@ function makeOCRCanvas(
  * Sonar screenshots frequently place metadata
  * around the edges of the image.
  */
+
 function makeCropCanvas(
   image,
   crop,
@@ -1286,11 +1288,10 @@ async function extractOCR(file) {
   let worker = null;
 
   try {
-    console.log("Starting SSS OCR...");
-
     worker = await createWorker("eng");
 
-    const image = await loadImage(file);
+    const image =
+      await loadImage(file);
 
     /*
      * Only 3 OCR passes.
@@ -1307,6 +1308,7 @@ async function extractOCR(file) {
           2
         ),
       },
+
       {
         name: "contrast",
         canvas: makeOCRCanvas(
@@ -1315,6 +1317,7 @@ async function extractOCR(file) {
           2
         ),
       },
+
       {
         name: "threshold",
         canvas: makeOCRCanvas(
@@ -1329,10 +1332,6 @@ async function extractOCR(file) {
 
     for (const item of canvases) {
       try {
-        console.log(
-          `OCR pass: ${item.name}`
-        );
-
         const result =
           await worker.recognize(
             item.canvas
@@ -1357,10 +1356,7 @@ async function extractOCR(file) {
           });
         }
       } catch (error) {
-        console.warn(
-          `OCR pass failed: ${item.name}`,
-          error
-        );
+        // Ignore failed OCR pass.
       }
     }
 
@@ -1376,14 +1372,6 @@ async function extractOCR(file) {
         )
         .join("\n\n");
 
-    console.log(
-      "=== SSS OCR RAW TEXT ==="
-    );
-
-    console.log(
-      combinedText
-    );
-
     /*
      * Parse metadata.
      */
@@ -1393,20 +1381,9 @@ async function extractOCR(file) {
         combinedText
       );
 
-    console.log(
-      "=== SSS OCR PARSED ==="
-    );
-
-    console.log(parsed);
-
     return parsed;
 
   } catch (error) {
-    console.warn(
-      "Sonar OCR extraction failed:",
-      error
-    );
-
     return {};
 
   } finally {
@@ -1506,11 +1483,9 @@ export async function extractSonarMetadata(
 
     result.height =
       dimensions.height;
+
   } catch (error) {
-    console.warn(
-      "Image dimensions could not be read:",
-      error
-    );
+    // Ignore image dimension errors.
   }
 
   /* ==========================================================
@@ -1593,11 +1568,9 @@ export async function extractSonarMetadata(
           exifValues.side;
       }
     }
+
   } catch (error) {
-    console.warn(
-      "EXIF metadata not available:",
-      error
-    );
+    // EXIF metadata unavailable.
   }
 
   /* ==========================================================
@@ -1790,18 +1763,6 @@ export async function extractSonarMetadata(
       "side"
     );
   }
-
-  /* ==========================================================
-     FINAL DEBUG INFORMATION
-  ========================================================== */
-
-  console.log(
-    "=== FINAL SONAR METADATA ==="
-  );
-
-  console.log(
-    result
-  );
 
   return result;
 }
