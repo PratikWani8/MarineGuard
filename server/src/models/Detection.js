@@ -36,12 +36,16 @@ const detectionSchema = new mongoose.Schema({
     depthM: Number,
     positionAccuracyEstimateM: Number
   },
-  shadowAnalysis: {
-    score: Number,
-    lengthPixels: Number,
-    direction: Number,
-    detected: Boolean
+ shadowAnalysis: {
+  score: Number,
+  lengthPixels: Number,
+  direction: {
+    type: String,
+    enum: ["up", "down", "left", "right", "unknown"],
+    default: "unknown"
   },
+  detected: Boolean
+},
   persistence: {
     framesSeen: Number,
     persistenceScore: Number,
