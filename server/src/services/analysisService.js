@@ -45,10 +45,19 @@ function mapDetection(d, surveyId, frameId) {
       d.classification ||
       "other_debris",
 
-    confidence:
-      Number(
-        d.confidence ?? 0
-      ),
+    confidence: (() => {
+  const value = Number(
+    d.confidence ?? 0
+  );
+
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return value <= 1
+    ? value * 100
+    : value;
+})(),
 
     uncertainty:
       Number(
@@ -279,30 +288,64 @@ export async function analyzeFrame({
   await SonarFrame.findByIdAndUpdate(
     frame._id,
     {
-      analysisStatus:
-        "processing",
+      analysisStatus: "processing",
     }
   );
 
   if (io) {
     io
       .to(`survey:${survey.surveyId}`)
-      .emit(
-        "analysis:started",
-        {
-          surveyId:
-            survey.surveyId,
-
-          frameId:
-            frame.frameId,
-        }
-      );
+      .emit("analysis:started", {
+        surveyId: survey.surveyId,
+        frameId: frame.frameId,
+      });
   }
 
-  const started =
-    Date.now();
+  const started = Date.now();
 
   try {
+    // --------------------------------------------------------
+    // Validate frame path
+    // --------------------------------------------------------
+
+    if (!frame.storedPath) {
+      throw new Error(
+        "Sonar frame has no stored image path"
+      );
+    }
+
+    console.log(
+      "\n========================================"
+    );
+
+    console.log(
+      "SONAR AI ANALYSIS STARTED"
+    );
+
+    console.log(
+      "Survey ID:",
+      survey.surveyId
+    );
+
+    console.log(
+      "Frame ID:",
+      frame.frameId
+    );
+
+    console.log(
+      "Frame Mongo ID:",
+      frame._id.toString()
+    );
+
+    console.log(
+      "Image path:",
+      frame.storedPath
+    );
+
+    console.log(
+      "========================================\n"
+    );
+
     // --------------------------------------------------------
     // Send frame to FastAPI
     // --------------------------------------------------------
@@ -311,51 +354,170 @@ export async function analyzeFrame({
       await analyzeSonarFrame(
         frame.storedPath,
         {
-          survey_id:
-            survey.surveyId,
-
-          frame_id:
-            frame.frameId,
-
+          survey_id: survey.surveyId,
+          frame_id: frame.frameId,
           ...frame.metadata,
         }
       );
 
     // --------------------------------------------------------
+    // DEBUG AI RESPONSE
+    // --------------------------------------------------------
+
+    console.log(
+      "\n========================================"
+    );
+
+    console.log(
+      "FASTAPI AI RESPONSE"
+    );
+
+    console.dir(
+      result,
+      {
+        depth: null,
+        colors: false,
+      }
+    );
+
+    console.log(
+      "========================================"
+    );
+
+    // --------------------------------------------------------
     // Extract detections
     // --------------------------------------------------------
 
-    const rawDetections =
+    let rawDetections = [];
+
+    if (
       Array.isArray(
         result?.detections
       )
-        ? result.detections
-        : [];
+    ) {
+      rawDetections =
+        result.detections;
+    }
+
+    // Support alternate response property
+    else if (
+      Array.isArray(
+        result?.results
+      )
+    ) {
+      rawDetections =
+        result.results;
+    }
+
+    // Support nested result
+    else if (
+      Array.isArray(
+        result?.result?.detections
+      )
+    ) {
+      rawDetections =
+        result.result.detections;
+    }
 
     // --------------------------------------------------------
-    // Convert AI detections to MongoDB format
+    // Detection count
+    // --------------------------------------------------------
+
+    console.log(
+      "\nAI DETECTION COUNT:",
+      rawDetections.length
+    );
+
+    if (
+      rawDetections.length === 0
+    ) {
+      console.warn(
+        "\n⚠️ AI SERVICE RETURNED ZERO DETECTIONS"
+      );
+
+      console.warn(
+        "Check the FastAPI/YOLO terminal."
+      );
+
+      console.warn(
+        "The Node backend cannot create detections "
+        + "if FastAPI returns an empty detections array."
+      );
+    } else {
+      console.log(
+        "\nAI DETECTIONS:"
+      );
+
+      rawDetections.forEach(
+        (detection, index) => {
+          console.log(
+            `Detection ${index + 1}:`
+          );
+
+          console.dir(
+            detection,
+            {
+              depth: null,
+              colors: false,
+            }
+          );
+        }
+      );
+    }
+
+    // --------------------------------------------------------
+    // Convert AI detections to MongoDB documents
     // --------------------------------------------------------
 
     const docs =
-      rawDetections.map(
-        (detection) =>
-          mapDetection(
-            detection,
-            survey._id,
-            frame._id
-          )
+      rawDetections
+        .filter(
+          (detection) =>
+            detection &&
+            typeof detection === "object"
+        )
+        .map(
+          (detection) =>
+            mapDetection(
+              detection,
+              survey._id,
+              frame._id
+            )
+        );
+
+    // --------------------------------------------------------
+    // Debug MongoDB documents
+    // --------------------------------------------------------
+
+    console.log(
+      "\nMONGODB DETECTION DOCUMENTS:",
+      docs.length
+    );
+
+    if (docs.length > 0) {
+      console.dir(
+        docs,
+        {
+          depth: null,
+          colors: false,
+        }
       );
+    }
 
     // --------------------------------------------------------
     // Save detections
     // --------------------------------------------------------
 
     const created =
-      docs.length
+      docs.length > 0
         ? await Detection.insertMany(
             docs
           )
         : [];
+
+    // --------------------------------------------------------
+    // Processing time
+    // --------------------------------------------------------
 
     const processingTime =
       Date.now() - started;
@@ -367,9 +529,7 @@ export async function analyzeFrame({
     await SonarFrame.findByIdAndUpdate(
       frame._id,
       {
-        analysisStatus:
-          "completed",
-
+        analysisStatus: "completed",
         processingTime,
       }
     );
@@ -386,11 +546,17 @@ export async function analyzeFrame({
     // Emit detection events
     // --------------------------------------------------------
 
-    for (const detection of created) {
-      if (!io) continue;
+    for (
+      const detection of created
+    ) {
+      if (!io) {
+        continue;
+      }
 
       io
-        .to(`survey:${survey.surveyId}`)
+        .to(
+          `survey:${survey.surveyId}`
+        )
         .emit(
           "detection:created",
           {
@@ -402,6 +568,51 @@ export async function analyzeFrame({
         );
     }
 
+    // --------------------------------------------------------
+    // Final log
+    // --------------------------------------------------------
+
+    console.log(
+      "\n========================================"
+    );
+
+    console.log(
+      "SONAR AI ANALYSIS COMPLETED"
+    );
+
+    console.log(
+      "Survey:",
+      survey.surveyId
+    );
+
+    console.log(
+      "Frame:",
+      frame.frameId
+    );
+
+    console.log(
+      "AI detections:",
+      rawDetections.length
+    );
+
+    console.log(
+      "MongoDB detections:",
+      created.length
+    );
+
+    console.log(
+      "Processing time:",
+      `${processingTime} ms`
+    );
+
+    console.log(
+      "========================================\n"
+    );
+
+    // --------------------------------------------------------
+    // Return
+    // --------------------------------------------------------
+
     return {
       result,
 
@@ -412,18 +623,53 @@ export async function analyzeFrame({
     };
 
   } catch (error) {
+    // --------------------------------------------------------
+    // Mark analysis failed
+    // --------------------------------------------------------
 
     await SonarFrame.findByIdAndUpdate(
       frame._id,
       {
-        analysisStatus:
-          "failed",
+        analysisStatus: "failed",
       }
+    );
+
+    console.error(
+      "\n========================================"
+    );
+
+    console.error(
+      "SONAR AI ANALYSIS FAILED"
+    );
+
+    console.error(
+      "Survey:",
+      survey?.surveyId
+    );
+
+    console.error(
+      "Frame:",
+      frame?.frameId
+    );
+
+    console.error(
+      "Error:",
+      error?.message
+    );
+
+    console.error(
+      "Stack:",
+      error?.stack
+    );
+
+    console.error(
+      "========================================\n"
     );
 
     throw error;
   }
 }
+
 
 
 // ============================================================
