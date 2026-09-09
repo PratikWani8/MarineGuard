@@ -5,17 +5,17 @@ import { baseURL } from "../services/api";
 export function useSocket(surveyId) {
   const socketRef = useRef(null);
 
-  const [connected, setConnected] =
-    useState(false);
-
-  const [events, setEvents] =
-    useState([]);
+  const [connected, setConnected] = useState(false);
+  const [events, setEvents] = useState([]);
+  const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-  
     if (!surveyId) {
       setConnected(false);
-      return undefined;
+      setSocket(null);
+      socketRef.current = null;
+      setEvents([]);
+      return;
     }
 
     let mounted = true;
@@ -23,86 +23,53 @@ export function useSocket(surveyId) {
     let socketOrigin;
 
     try {
-      socketOrigin = new URL(
-        baseURL
-      ).origin;
+      socketOrigin = new URL(baseURL).origin;
     } catch (error) {
-      console.error(
-        "Invalid API base URL:",
-        baseURL
-      );
-
+      console.error("Invalid API base URL:", baseURL);
       setConnected(false);
-
-      return undefined;
+      return;
     }
 
-    const socket = io(
-      socketOrigin,
-      {
-        transports: [
-          "websocket",
-          "polling",
-        ],
+    const socketInstance = io(socketOrigin, {
+      transports: ["polling", "websocket"],
+      autoConnect: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 5000,
+    });
 
-        autoConnect: true,
+    socketRef.current = socketInstance;
+    setSocket(socketInstance);
 
-        reconnection: true,
+    const pushEvent = (type) => (payload) => {
+      if (!mounted) return;
 
-        reconnectionAttempts: 5,
-
-        reconnectionDelay: 1000,
-
-        timeout: 5000,
-      }
-    );
-
-    socketRef.current = socket;
-
-    const pushEvent =
-      (type) =>
-      (payload) => {
-        if (!mounted) {
-          return;
-        }
-
-        setEvents(
-          (previous) => [
-            ...previous.slice(-49),
-
-            {
-              type,
-              payload,
-              at: Date.now(),
-            },
-          ]
-        );
-      };
+      setEvents((previous) => [
+        ...previous.slice(-49),
+        {
+          type,
+          payload,
+          at: Date.now(),
+        },
+      ]);
+    };
 
     const handleConnect = () => {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       console.log(
         "MarineGuard Socket.IO connected:",
-        socket.id
+        socketInstance.id
       );
 
       setConnected(true);
 
-      socket.emit(
-        "survey:join",
-        surveyId
-      );
+      socketInstance.emit("survey:join", surveyId);
     };
 
-    const handleDisconnect = (
-      reason
-    ) => {
-      if (!mounted) {
-        return;
-      }
+    const handleDisconnect = (reason) => {
+      if (!mounted) return;
 
       console.warn(
         "MarineGuard Socket.IO disconnected:",
@@ -112,137 +79,62 @@ export function useSocket(surveyId) {
       setConnected(false);
     };
 
-    const handleConnectError = (
-      error
-    ) => {
-      if (!mounted) {
-        return;
-      }
+    const handleConnectError = (error) => {
+      if (!mounted) return;
 
       console.warn(
         "MarineGuard Socket.IO unavailable:",
-        error?.message ||
-          "Connection failed"
+        error?.message || "Connection failed"
       );
 
       setConnected(false);
     };
 
-    socket.on(
-      "connect",
-      handleConnect
-    );
-
-    socket.on(
-      "disconnect",
-      handleDisconnect
-    );
-
-    socket.on(
-      "connect_error",
-      handleConnectError
-    );
-
-    // -------------------------------------------------------
-    // SURVEY EVENTS
-    // -------------------------------------------------------
-
     const handlers = {
-      "analysis:started":
-        pushEvent(
-          "analysis:started"
-        ),
-
-      "analysis:progress":
-        pushEvent(
-          "analysis:progress"
-        ),
-
-      "analysis:completed":
-        pushEvent(
-          "analysis:completed"
-        ),
-
-      "analysis:failed":
-        pushEvent(
-          "analysis:failed"
-        ),
-
-      "detection:created":
-        pushEvent(
-          "detection:created"
-        ),
+      "analysis:started": pushEvent("analysis:started"),
+      "analysis:progress": pushEvent("analysis:progress"),
+      "analysis:completed": pushEvent("analysis:completed"),
+      "analysis:failed": pushEvent("analysis:failed"),
+      "detection:created": pushEvent("detection:created"),
     };
 
-    Object.entries(
-      handlers
-    ).forEach(
-      ([
-        eventName,
-        handler,
-      ]) => {
-        socket.on(
-          eventName,
-          handler
-        );
+    socketInstance.on("connect", handleConnect);
+    socketInstance.on("disconnect", handleDisconnect);
+    socketInstance.on("connect_error", handleConnectError);
+
+    Object.entries(handlers).forEach(
+      ([eventName, handler]) => {
+        socketInstance.on(eventName, handler);
       }
     );
-
-    // -------------------------------------------------------
-    // CLEANUP
-    // -------------------------------------------------------
 
     return () => {
       mounted = false;
 
-      // Leave survey room.
-      if (socket.connected) {
-        socket.emit(
-          "survey:leave",
-          surveyId
-        );
+      if (socketInstance.connected) {
+        socketInstance.emit("survey:leave", surveyId);
       }
 
-      // Remove listeners.
-      socket.off(
-        "connect",
-        handleConnect
-      );
-
-      socket.off(
-        "disconnect",
-        handleDisconnect
-      );
-
-      socket.off(
+      socketInstance.off("connect", handleConnect);
+      socketInstance.off("disconnect", handleDisconnect);
+      socketInstance.off(
         "connect_error",
         handleConnectError
       );
 
-      Object.entries(
-        handlers
-      ).forEach(
-        ([
-          eventName,
-          handler,
-        ]) => {
-          socket.off(
-            eventName,
-            handler
-          );
+      Object.entries(handlers).forEach(
+        ([eventName, handler]) => {
+          socketInstance.off(eventName, handler);
         }
       );
 
-      // Close connection.
-      socket.disconnect();
+      socketInstance.disconnect();
 
-      if (
-        socketRef.current ===
-        socket
-      ) {
+      if (socketRef.current === socketInstance) {
         socketRef.current = null;
       }
 
+      setSocket(null);
       setConnected(false);
     };
   }, [surveyId]);
@@ -250,6 +142,6 @@ export function useSocket(surveyId) {
   return {
     connected,
     events,
-    socket: socketRef.current,
+    socket,
   };
 }
