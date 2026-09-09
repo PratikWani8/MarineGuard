@@ -4,13 +4,26 @@ export const getSurveys = () =>
   api.get("/surveys");
 
 export const getSurvey = (surveyId) =>
-  api.get(`/surveys/${encodeURIComponent(surveyId)}`);
+  api.get(
+    `/surveys/${encodeURIComponent(
+      surveyId
+    )}`
+  );
 
 export const createSurvey = (payload) =>
-  api.post("/surveys", payload);
+  api.post(
+    "/surveys",
+    payload
+  );
 
-export const deleteSurvey = (surveyId) =>
-  api.delete(`/surveys/${encodeURIComponent(surveyId)}`);
+export const deleteSurvey = (
+  surveyId
+) =>
+  api.delete(
+    `/surveys/${encodeURIComponent(
+      surveyId
+    )}`
+  );
 
 /**
  * Upload a Side-Scan Sonar frame
@@ -30,7 +43,10 @@ export const uploadFrame = (
 ) => {
   const form = new FormData();
 
-  form.append("image", file);
+  form.append(
+    "image",
+    file
+  );
 
   form.append(
     "metadata",
@@ -38,15 +54,66 @@ export const uploadFrame = (
   );
 
   return api.post(
-    `/surveys/${encodeURIComponent(surveyId)}/frames`,
+    `/surveys/${encodeURIComponent(
+      surveyId
+    )}/frames`,
     form,
     {
-      onUploadProgress,
+      onUploadProgress
     }
   );
 };
 
-export const analyzeSurvey = (surveyId) =>
+/**
+ * Analyze all frames in a survey
+ */
+export const analyzeSurvey = (
+  surveyId
+) =>
   api.post(
-    `/surveys/${encodeURIComponent(surveyId)}/analyze`
+    `/surveys/${encodeURIComponent(
+      surveyId
+    )}/analyze`
+  );
+
+/**
+ * Returns the relative URL for a
+ * sonar frame image.
+ *
+ * NOTE:
+ * This is kept for components that
+ * may need the URL directly.
+ */
+export const getFrameImageUrl = (
+  surveyId,
+  frameId
+) =>
+  `/api/v1/surveys/${encodeURIComponent(
+    surveyId
+  )}/frames/${encodeURIComponent(
+    frameId
+  )}/image`;
+
+/**
+ * Get protected sonar frame image.
+ *
+ * Axios automatically adds the
+ * Authorization header through
+ * api.js interceptor.
+ *
+ * Returns a Blob.
+ */
+export const getFrameImage = (
+  surveyId,
+  frameId
+) =>
+  api.get(
+    `/surveys/${encodeURIComponent(
+      surveyId
+    )}/frames/${encodeURIComponent(
+      frameId
+    )}/image`,
+    {
+      responseType: "blob"
+    }
   );
