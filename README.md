@@ -5,7 +5,7 @@
 MarineGuard AI helps marine survey and cleanup teams analyze Side-Scan Sonar imagery, identify potential underwater debris and anomalies, visualize detections geographically, and prioritize findings using confidence, hazard, risk, and persistence signals.
 
 <p align="center">
-  <img src="./assets/detect.png" alt="Detect" width="700" height="250"/>
+  <img src="./assets/detect.png" alt="Detect" width="700" height="350"/>
 </p>
 
 ## ✨ Features
