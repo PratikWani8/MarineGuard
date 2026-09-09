@@ -1288,102 +1288,37 @@ async function extractOCR(file) {
   let worker = null;
 
   try {
+    // Create worker once for this extraction
     worker = await createWorker("eng");
 
-    const image =
-      await loadImage(file);
+    const image = await loadImage(file);
 
     /*
-     * Only 3 OCR passes.
-     * This is much faster than OCR-ing multiple
-     * cropped regions.
+     * FAST OCR:
+     * - One image only
+     * - No contrast pass
+     * - No threshold pass
+     * - Moderate 1.5x upscale
      */
+    const canvas = makeOCRCanvas(
+      image,
+      "normal",
+      1.5
+    );
 
-    const canvases = [
-      {
-        name: "normal",
-        canvas: makeOCRCanvas(
-          image,
-          "normal",
-          2
-        ),
-      },
+    const result = await worker.recognize(canvas);
 
-      {
-        name: "contrast",
-        canvas: makeOCRCanvas(
-          image,
-          "contrast",
-          2
-        ),
-      },
+    const text =
+      result?.data?.text || "";
 
-      {
-        name: "threshold",
-        canvas: makeOCRCanvas(
-          image,
-          "threshold",
-          2
-        ),
-      },
-    ];
-
-    const results = [];
-
-    for (const item of canvases) {
-      try {
-        const result =
-          await worker.recognize(
-            item.canvas
-          );
-
-        const text =
-          result?.data?.text || "";
-
-        const confidence =
-          Number(
-            result?.data?.confidence
-          );
-
-        if (text.trim()) {
-          results.push({
-            name: item.name,
-            text,
-            confidence:
-              Number.isFinite(confidence)
-                ? confidence
-                : null,
-          });
-        }
-      } catch (error) {
-        // Ignore failed OCR pass.
-      }
+    if (!text.trim()) {
+      return {};
     }
 
-    /*
-     * Combine all OCR text.
-     */
-
-    const combinedText =
-      results
-        .map(
-          item =>
-            `--- ${item.name} ---\n${item.text}`
-        )
-        .join("\n\n");
-
-    /*
-     * Parse metadata.
-     */
-
-    const parsed =
-      parseOCRMetadata(
-        combinedText
-      );
-
-    return parsed;
+    return parseOCRMetadata(text);
 
   } catch (error) {
+    console.error("OCR error:", error);
     return {};
 
   } finally {
@@ -1391,7 +1326,7 @@ async function extractOCR(file) {
       try {
         await worker.terminate();
       } catch {
-        // Ignore cleanup errors.
+        // Ignore cleanup errors
       }
     }
   }
