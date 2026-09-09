@@ -353,3 +353,436 @@ export const heatmap = asyncHandler(
     return ok(res, points);
   }
 );
+
+// ============================================================
+// ANALYTICS
+// ============================================================
+
+export const analytics = asyncHandler(
+  async (req, res) => {
+    const [
+      totalSurveys,
+      totalFrames,
+      totalDetections,
+      statusBreakdown,
+      classificationBreakdown,
+      riskBreakdown,
+      timeline,
+      surveyBreakdown,
+      confidenceDistribution,
+      depthDistribution,
+      coordinates,
+    ] = await Promise.all([
+      // --------------------------------------------------------
+      // Total surveys
+      // --------------------------------------------------------
+      Survey.countDocuments(),
+
+      // --------------------------------------------------------
+      // Total sonar frames
+      // --------------------------------------------------------
+      SonarFrame.countDocuments(),
+
+      // --------------------------------------------------------
+      // Total detections
+      // --------------------------------------------------------
+      Detection.countDocuments(),
+
+      // --------------------------------------------------------
+      // Detection status
+      // --------------------------------------------------------
+      Detection.aggregate([
+        {
+          $group: {
+            _id: {
+              $ifNull: ["$status", "UNKNOWN"],
+            },
+            count: {
+              $sum: 1,
+            },
+          },
+        },
+        {
+          $sort: {
+            count: -1,
+          },
+        },
+      ]),
+
+      // --------------------------------------------------------
+      // Classification
+      // --------------------------------------------------------
+      Detection.aggregate([
+        {
+          $group: {
+            _id: {
+              $ifNull: ["$classification", "UNKNOWN"],
+            },
+            count: {
+              $sum: 1,
+            },
+          },
+        },
+        {
+          $sort: {
+            count: -1,
+          },
+        },
+      ]),
+
+      // --------------------------------------------------------
+      // Risk
+      // --------------------------------------------------------
+      Detection.aggregate([
+        {
+          $group: {
+            _id: {
+              $ifNull: ["$riskLevel", "UNKNOWN"],
+            },
+            count: {
+              $sum: 1,
+            },
+          },
+        },
+        {
+          $sort: {
+            count: -1,
+          },
+        },
+      ]),
+
+      // --------------------------------------------------------
+      // Detection timeline
+      // --------------------------------------------------------
+      Detection.aggregate([
+        {
+          $match: {
+            createdAt: {
+              $exists: true,
+              $ne: null,
+            },
+          },
+        },
+        {
+          $group: {
+            _id: {
+              $dateToString: {
+                format: "%Y-%m-%d",
+                date: "$createdAt",
+              },
+            },
+            detections: {
+              $sum: 1,
+            },
+          },
+        },
+        {
+          $sort: {
+            _id: 1,
+          },
+        },
+      ]),
+
+      // --------------------------------------------------------
+      // Detections by survey
+      // --------------------------------------------------------
+      Detection.aggregate([
+        {
+          $group: {
+            _id: "$survey",
+            detections: {
+              $sum: 1,
+            },
+          },
+        },
+        {
+          $sort: {
+            detections: -1,
+          },
+        },
+        {
+          $limit: 20,
+        },
+      ]),
+
+      // --------------------------------------------------------
+      // Confidence distribution
+      // --------------------------------------------------------
+      Detection.aggregate([
+        {
+          $match: {
+            confidence: {
+              $exists: true,
+              $ne: null,
+            },
+          },
+        },
+        {
+          $bucket: {
+            groupBy: "$confidence",
+            boundaries: [
+              0,
+              20,
+              40,
+              60,
+              80,
+              100,
+              101,
+            ],
+            default: "UNKNOWN",
+            output: {
+              count: {
+                $sum: 1,
+              },
+            },
+          },
+        },
+      ]),
+
+      // --------------------------------------------------------
+      // Depth distribution
+      // --------------------------------------------------------
+      Detection.aggregate([
+        {
+          $match: {
+            "location.depthM": {
+              $exists: true,
+              $ne: null,
+            },
+          },
+        },
+        {
+          $group: {
+            _id: "$location.depthM",
+            detections: {
+              $sum: 1,
+            },
+          },
+        },
+        {
+          $sort: {
+            _id: 1,
+          },
+        },
+      ]),
+
+      // --------------------------------------------------------
+      // Geographical detections
+      // --------------------------------------------------------
+      Detection.find({
+        "location.available": true,
+        "location.latitude": {
+          $exists: true,
+          $ne: null,
+        },
+        "location.longitude": {
+          $exists: true,
+          $ne: null,
+        },
+      })
+        .select(
+          [
+            "detectionId",
+            "classification",
+            "confidence",
+            "hazardScore",
+            "riskLevel",
+            "location",
+          ].join(" ")
+        )
+        .lean(),
+    ]);
+
+    // ==========================================================
+    // Format status data
+    // ==========================================================
+
+    const byStatus = statusBreakdown.map((item) => ({
+      name: item._id,
+      value: item.count,
+    }));
+
+    // ==========================================================
+    // Format classification data
+    // ==========================================================
+
+    const byClass = classificationBreakdown.map((item) => ({
+      name: item._id,
+      value: item.count,
+    }));
+
+    // ==========================================================
+    // Format risk data
+    // ==========================================================
+
+    const byRisk = riskBreakdown.map((item) => ({
+      name: item._id,
+      value: item.count,
+    }));
+
+    // ==========================================================
+    // Format timeline
+    // ==========================================================
+
+    const byMonth = timeline.map((item) => ({
+      date: item._id,
+      detections: item.detections,
+    }));
+
+    // ==========================================================
+    // Format confidence
+    // ==========================================================
+
+    const confidence = confidenceDistribution.map((item) => {
+      if (typeof item._id !== "number") {
+        return {
+          range: "Unknown",
+          count: item.count,
+        };
+      }
+
+      const start = item._id;
+      const nextBoundary =
+        confidenceDistribution.find(
+          (x) =>
+            typeof x._id === "number" &&
+            x._id > item._id
+        )?._id;
+
+      const end =
+        nextBoundary !== undefined
+          ? nextBoundary
+          : 100;
+
+      return {
+        range: `${start}-${end}%`,
+        count: item.count,
+      };
+    });
+
+    // ==========================================================
+    // Format depth
+    // ==========================================================
+
+    const depth = depthDistribution.map((item) => ({
+      depth: Number(item._id),
+      detections: item.detections,
+    }));
+
+    // ==========================================================
+    // Format survey data
+    // ==========================================================
+
+    const surveyIds = surveyBreakdown
+      .map((item) => item._id)
+      .filter(Boolean);
+
+    const surveys =
+      surveyIds.length > 0
+        ? await Survey.find({
+            _id: {
+              $in: surveyIds,
+            },
+          })
+            .select("_id surveyId name")
+            .lean()
+        : [];
+
+    const surveyMap = new Map(
+      surveys.map((survey) => [
+        String(survey._id),
+        survey.surveyId ||
+          survey.name ||
+          String(survey._id),
+      ])
+    );
+
+    const bySurvey = surveyBreakdown.map(
+      (item) => ({
+        name:
+          surveyMap.get(
+            String(item._id)
+          ) ||
+          String(item._id || "Unknown"),
+        value: item.detections,
+      })
+    );
+
+    // ==========================================================
+    // Format geographic data
+    // ==========================================================
+
+    const coordinateData = coordinates
+      .map((detection) => {
+        const latitude = Number(
+          detection.location?.latitude
+        );
+
+        const longitude = Number(
+          detection.location?.longitude
+        );
+
+        if (
+          !Number.isFinite(latitude) ||
+          !Number.isFinite(longitude)
+        ) {
+          return null;
+        }
+
+        return {
+          detectionId:
+            detection.detectionId,
+
+          classification:
+            detection.classification ||
+            "UNKNOWN",
+
+          latitude,
+
+          longitude,
+
+          confidence:
+            Number(
+              detection.confidence || 0
+            ),
+
+          hazardScore:
+            Number(
+              detection.hazardScore || 0
+            ),
+
+          riskLevel:
+            detection.riskLevel ||
+            "LOW",
+
+          depthM:
+            detection.location?.depthM ??
+            null,
+        };
+      })
+      .filter(Boolean);
+
+    // ==========================================================
+    // Return analytics
+    // ==========================================================
+
+    return ok(res, {
+      summary: {
+        totalSurveys,
+        totalFrames,
+        totalDetections,
+      },
+
+      charts: {
+        byClass,
+        byStatus,
+        byRisk,
+        byMonth,
+        bySurvey,
+        confidence,
+        depth,
+        coordinates: coordinateData,
+      },
+    });
+  }
+);
