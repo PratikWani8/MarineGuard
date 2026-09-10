@@ -68,124 +68,114 @@ export default function SSSUpload() {
   // FILE SELECTION
   // ==========================================================
 
-  async function selectFile(selectedFile) {
-    if (!selectedFile) return;
+ async function selectFile(selectedFile) {
+  if (!selectedFile) return;
 
-    setError("");
-    setSuccess("");
-    setMetadataSource(null);
+  setError("");
+  setSuccess("");
+  setMetadataSource(null);
 
-    const allowedExtensions = [
-      ".png",
-      ".jpg",
-      ".jpeg",
-      ".tif",
-      ".tiff",
-      ".webp",
-    ];
+  const allowedExtensions = [
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".tif",
+    ".tiff",
+    ".webp",
+  ];
 
-    const extension =
-      "." +
-      selectedFile.name
-        .split(".")
-        .pop()
-        .toLowerCase();
+  const extension =
+    "." +
+    selectedFile.name.split(".").pop().toLowerCase();
 
-    if (!allowedExtensions.includes(extension)) {
-      setError(
-        "Invalid file type. Upload PNG, JPG, JPEG, TIFF or WebP."
-      );
-
-      return;
-    }
-
-    const maxSize = 50 * 1024 * 1024;
-
-    if (selectedFile.size > maxSize) {
-      setError(
-        "File is too large. Maximum allowed size is 50 MB."
-      );
-
-      return;
-    }
-
-    setFile(selectedFile);
-
-    const objectUrl =
-      URL.createObjectURL(selectedFile);
-
-    setPreview(objectUrl);
-
-    // --------------------------------------------------------
-    // Frame ID
-    // --------------------------------------------------------
-
-    if (!metadata.frame_id) {
-      setMetadata((prev) => ({
-        ...prev,
-        frame_id: "",
-      }));
-    }
-
-    // --------------------------------------------------------
-    // Automatic metadata extraction
-    // --------------------------------------------------------
-
-    setExtracting(true);
-
-    try {
-      const extracted =
-        await extractSonarMetadata(
-          selectedFile
-        );
-
-      setMetadata((prev) => ({
-        ...prev,
-
-        latitude:
-          extracted.latitude ??
-          prev.latitude,
-
-        longitude:
-          extracted.longitude ??
-          prev.longitude,
-
-        heading:
-          extracted.heading ??
-          prev.heading,
-
-        depth:
-          extracted.depth ??
-          extracted.depth_m ??
-          prev.depth,
-
-        sonar_range_m:
-          extracted.sonar_range_m ??
-          prev.sonar_range_m,
-
-        pixel_resolution_m:
-          extracted.pixel_resolution_m ??
-          prev.pixel_resolution_m,
-
-        side:
-          extracted.side !== "unknown"
-            ? extracted.side
-            : prev.side,
-      }));
-
-      setMetadataSource(
-        extracted
-      );
-
-    } catch (err) {
-      console.warn(
-        "Metadata extraction failed:",
-        err
-      );
-    } finally {
-      setExtracting(false);
-    }
+  if (!allowedExtensions.includes(extension)) {
+    setError(
+      "Invalid file type. Upload PNG, JPG, JPEG, TIFF or WebP."
+    );
+    return;
   }
+
+  const maxSize = 50 * 1024 * 1024;
+
+  if (selectedFile.size > maxSize) {
+    setError(
+      "File is too large. Maximum allowed size is 50 MB."
+    );
+    return;
+  }
+
+  setFile(selectedFile);
+
+  const objectUrl = URL.createObjectURL(selectedFile);
+  setPreview(objectUrl);
+
+  // ==========================================================
+  // AUTOMATIC METADATA EXTRACTION
+  // ==========================================================
+
+  setExtracting(true);
+
+  try {
+    // IMPORTANT:
+    // extracted exists inside this try block.
+    const extracted = await extractSonarMetadata(selectedFile);
+
+    console.log("Extracted sonar metadata:", extracted);
+
+    // Store extracted values in React state
+    setMetadata((prev) => ({
+      ...prev,
+
+      frame_id:
+        extracted.frame_id ??
+        prev.frame_id,
+
+      latitude:
+        extracted.latitude ??
+        prev.latitude,
+
+      longitude:
+        extracted.longitude ??
+        prev.longitude,
+
+      heading:
+        extracted.heading ??
+        prev.heading,
+
+      depth:
+        extracted.depth ??
+        extracted.depth_m ??
+        prev.depth,
+
+      sonar_range_m:
+        extracted.sonar_range_m ??
+        prev.sonar_range_m,
+
+      pixel_resolution_m:
+        extracted.pixel_resolution_m ??
+        prev.pixel_resolution_m,
+
+      side:
+        extracted.side &&
+        extracted.side !== "unknown"
+          ? extracted.side
+          : prev.side,
+    }));
+
+    setMetadataSource(extracted);
+  } catch (err) {
+    console.error(
+      "Metadata extraction failed:",
+      err
+    );
+
+    setError(
+      "Could not automatically extract sonar metadata. You can enter it manually."
+    );
+  } finally {
+    setExtracting(false);
+  }
+}
 
   function handleFileChange(e) {
     const selectedFile =
@@ -557,20 +547,22 @@ export default function SSSUpload() {
       // ------------------------------------------------------
 
       setTimeout(() => {
-        if (frameId !== undefined && frameId !== null) {
-          navigate(
-            `/analysis/${encodeURIComponent(
-              frameId
-            )}`
-          );
-        } else {
-          navigate(
-            `/surveys/${encodeURIComponent(
-              surveyId
-            )}`
-          );
-        }
-      }, 900);
+  if (frameId !== undefined && frameId !== null) {
+    navigate(
+      `/analysis?survey=${encodeURIComponent(
+        surveyId
+      )}&frame=${encodeURIComponent(
+        frameId
+      )}`
+    );
+  } else {
+    navigate(
+      `/surveys/${encodeURIComponent(
+        surveyId
+      )}`
+    );
+  }
+}, 900);
 
     } catch (err) {
       console.error(
