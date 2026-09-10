@@ -1,4 +1,4 @@
-# MarineGuard AI
+# MarineGuard
 
 > AI-powered underwater marine debris and anomaly detection platform using Side-Scan Sonar (SSS) imagery.
 
