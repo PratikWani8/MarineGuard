@@ -22,7 +22,8 @@
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.6.2",
     "recharts": "^2.15.1",
-    "socket.io-client": "^4.8.1"
+    "socket.io-client": "^4.8.1",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.4.1",
