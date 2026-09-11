@@ -63,12 +63,12 @@ class Settings(BaseSettings):
     # ========================================================
 
     yolo_model_path: str = Field(
-        default="weights/detection/best_detector.pt",
+        default="weights/detection/V2_best.pt",
         description="YOLO model path relative to project root",
     )
 
     segmentation_model_path: str = Field(
-        default="weights/segmentation/best_detector.pt",
+        default="weights/segmentation/V2_best.pt",
         description="Segmentation model path relative to project root",
     )
 
