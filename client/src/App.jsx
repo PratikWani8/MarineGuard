@@ -17,6 +17,7 @@ import MarineMap from "./pages/MarineMap";
 import CleanupMission from "./pages/CleanupMission";
 import Reports from "./pages/Reports";
 import SSSUpload from "./pages/SSSUpload";
+import Analytics from "./pages/Analytics";
 
 function Protected() {
   const { user, loading } = useAuth();
@@ -82,52 +83,55 @@ export default function App() {
           PROTECTED APPLICATION
       ====================================================== */}
 
-      <Route element={<Protected />}>
-        <Route
-          path="/dashboard"
-          element={<Dashboard />}
-        />
+    <Route element={<Protected />}>
+  <Route
+    path="/dashboard"
+    element={<Dashboard />}
+  />
 
-        <Route
-          path="/surveys"
-          element={<Surveys />}
-        />
+  <Route
+    path="/surveys"
+    element={<Surveys />}
+  />
 
-        <Route
-          path="/surveys/:surveyId"
-          element={<SurveyDetails />}
-        />
+  <Route
+    path="/surveys/:surveyId"
+    element={<SurveyDetails />}
+  />
 
-        <Route
-          path="/analysis/:frameId"
-          element={<SonarAnalysis />}
-        />
+  {/* Sonar Analysis */}
+  <Route
+    path="/analysis"
+    element={<SonarAnalysis />}
+  />
 
-        <Route
-          path="/detections/:detectionId"
-          element={<DetectionDetails />}
-        />
+  <Route
+    path="/detections/:detectionId"
+    element={<DetectionDetails />}
+  />
 
-        <Route
-          path="/map"
-          element={<MarineMap />}
-        />
+  <Route
+    path="/map"
+    element={<MarineMap />}
+  />
 
-        <Route
-          path="/missions"
-          element={<CleanupMission />}
-        />
+  <Route
+    path="/missions"
+    element={<CleanupMission />}
+  />
 
-        <Route
-          path="/reports"
-          element={<Reports />}
-        />
+  <Route
+    path="/reports"
+    element={<Reports />}
+  />
 
-        <Route
-          path="/sss-upload"
-          element={<SSSUpload />}
-        />
-      </Route>
+  <Route
+    path="/sss-upload"
+    element={<SSSUpload />}
+  />
+
+  <Route path="/analytics" element={<Analytics />} />
+</Route>
 
       {/* =====================================================
           FALLBACK
