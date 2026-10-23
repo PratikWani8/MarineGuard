@@ -110,20 +110,6 @@ const creators = [
       "Worked on intelligent sonar analysis, detection patterns, and responsible AI features for underwater intelligence.",
     photo: "/members/member4.png",
   },
-   {
-    name: "Sharanya Mahalle",
-    role: "Environmental Impact Analyst",
-    description:
-      "Analyzed the environmental impact of underwater survey operations and supported conservation efforts.",
-    photo: "/members/member5.png",
-  },
-  {
-    name: "Sejal Dhamgaye",
-    role: "Documentation & Report",
-    description:
-      "Worked on documentation, report generation, and ensuring that MarineGuard's findings are clear and actionable.",
-    photo: "/members/member6.png",
-  },
 ];
 
 export default function About() {
@@ -314,7 +300,7 @@ export default function About() {
             whileInView="visible"
             viewport={{ once: true, amount: 0.1 }}
             variants={stagger}
-            className="mt-12 grid gap-6 sm:grid-cols-3"
+            className="mt-12 grid gap-6 sm:grid-cols-2"
           >
             {creators.map((creator) => (
               <motion.div
