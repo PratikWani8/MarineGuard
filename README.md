@@ -313,24 +313,6 @@ Potential use cases include:
 
 AI detections should be reviewed by qualified operators before operational decisions are made.
 
-## 🗺️ Roadmap
-
-Potential future improvements:
-
-- [ ] Improved SSS image preprocessing
-- [ ] Larger labeled marine-debris dataset
-- [ ] Model fine-tuning for local survey conditions
-- [ ] Multi-frame object tracking
-- [ ] Improved anomaly classification
-- [ ] Detection review / approval workflow
-- [ ] Exportable survey reports
-- [ ] Advanced cleanup mission planning
-- [ ] Model performance monitoring
-- [ ] Offline / edge inference
-- [ ] GPU-accelerated deployment
-- [ ] Role-based access control
-- [ ] Production deployment and monitoring
-
 ---
 
 ## 👨‍💻 Project
