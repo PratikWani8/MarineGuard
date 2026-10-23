@@ -315,15 +315,5 @@ AI detections should be reviewed by qualified operators before operational decis
 
 ---
 
-## 👨‍💻 Project
-
-**MarineGuard AI**
-
-AI-powered marine sonar intelligence for detecting, analyzing, mapping, and prioritizing underwater anomalies and debris.
-
-Built with React, Node.js, Python, FastAPI, MongoDB, PyTorch, YOLO, and modern web technologies.
-
----
-
 ## ⭐ Support
 If you found this project helpful, consider giving it a star ⭐ on GitHub!
