@@ -6,3 +6,4 @@ reports/*
 !uploads/sonar/.gitkeep
 !uploads/camera/.gitkeep
 !reports/.gitkeep
+scripts
